@@ -12,7 +12,13 @@ import {
   REASONS_NEW_YEAR
 } from './reasons'
 
-export const HOST = 'https://shouldideploy.today'
+export function getBaseUrl() {
+  if (typeof window !== 'undefined') return ''
+  if (process.env.VERCEL_URL) return `https://${process.env.VERCEL_URL}`
+  if (process.env.NODE_ENV === 'production')
+    return 'https://shouldideploy.today'
+  return `http://localhost:${process.env.PORT ?? 3001}`
+}
 
 export const shouldIDeploy = function (time: Time | null, date?: Date) {
   if (!time) {
@@ -33,16 +39,18 @@ export const shouldIDeploy = function (time: Time | null, date?: Date) {
   )
 }
 
-export const shouldIDeployAnswerImage = function (time: Time | null) {
-  return shouldIDeploy(time) ? `${HOST}/yes.png` : `${HOST}/no.png`
-}
-
 export const shouldIDeployColorTheme = function (time: Time | null) {
   return shouldIDeploy(time) ? '#36a64f' : '#ff4136'
 }
 
+export const shouldIDeployFontTheme = function (time: Time | null) {
+  return shouldIDeploy(time) ? '#fff' : '#111'
+}
+
 export const shouldIDeployFavIcon = function (time: Time | null) {
-  return shouldIDeploy(time) ? `${HOST}/dots.png` : `${HOST}/dots-red.png`
+  return shouldIDeploy(time)
+    ? `${getBaseUrl()}/dots.png`
+    : `${getBaseUrl()}/dots-red.png`
 }
 
 export const getRandom = function ranDay(list: string | string[]) {
@@ -59,6 +67,7 @@ export function dayHelper(time: Time) {
   if (time.isDayBeforeChristmas()) {
     return REASONS_FOR_DAY_BEFORE_CHRISTMAS
   }
+
   if (time.isChristmas()) {
     return REASONS_FOR_CHRISTMAS
   }
@@ -78,14 +87,18 @@ export function dayHelper(time: Time) {
   if (time.isFriday()) {
     return REASONS_TO_NOT_DEPLOY
   }
+
   if (time.isThursdayAfternoon()) {
     return REASONS_FOR_THURSDAY_AFTERNOON
   }
-  if (time.isAfternoon() && !time.isWeekend()) {
-    return REASONS_FOR_AFTERNOON
-  }
+
   if (time.isWeekend()) {
     return REASONS_FOR_WEEKEND
   }
+
+  if (time.isAfternoon()) {
+    return REASONS_FOR_AFTERNOON
+  }
+
   return REASONS_TO_DEPLOY
 }
