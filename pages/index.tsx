@@ -1,12 +1,12 @@
 // index.tsx
 import React, { useEffect, useState } from 'react'
 import Head from 'next/head'
+import { useRouter } from 'next/router'
 import { shouldIDeploy, getBaseUrl } from '../helpers/constants'
 import Time from '../helpers/time'
 import Widget from '../component/widget'
 import { useTranslation } from '../helpers/i18n'
 import Footer from '../component/footer'
-import Router from 'next/router'
 import { Theme, ThemeType } from '../helpers/themes'
 
 interface IPage {
@@ -15,10 +15,24 @@ interface IPage {
   initialReason: string
 }
 
+const isValidCustomDate = (date?: string): date is string => {
+  if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+    return false
+  }
+
+  const parsedDate = new Date(`${date}T00:00:00Z`)
+  return !Number.isNaN(parsedDate.getTime()) && parsedDate.toISOString().startsWith(date)
+}
+
 const Page: React.FC<IPage> = ({ tz, now: initialNow, initialReason }) => {
-  const [timezone, setTimezone] = useState<string>(tz)
+  const router = useRouter()
+  const queryTimezone =
+    typeof router.query.tz === 'string' && Time.zoneExists(router.query.tz)
+      ? router.query.tz
+      : tz
+  const [timezone, setTimezone] = useState<string>(queryTimezone)
   const [now, setNow] = useState<any>(
-    new Time(initialNow.timezone, initialNow.customDate)
+    new Time(queryTimezone, initialNow.customDate)
   )
   const [theme, setTheme] = useState<ThemeType>(Theme.Light)
 
@@ -36,6 +50,15 @@ const Page: React.FC<IPage> = ({ tz, now: initialNow, initialReason }) => {
       applyTheme(systemTheme)
     }
   }, [])
+
+  useEffect(() => {
+    const customDate =
+      typeof router.query.date === 'string' && isValidCustomDate(router.query.date)
+        ? router.query.date
+        : undefined
+
+    setNow(new Time(timezone, customDate))
+  }, [router.query.date])
 
   const applyTheme = (newTheme: ThemeType) => {
     document.documentElement.setAttribute('data-theme', newTheme)
@@ -56,7 +79,7 @@ const Page: React.FC<IPage> = ({ tz, now: initialNow, initialReason }) => {
 
     const newUrl = new URL(window.location.toString())
     newUrl.searchParams.set('tz', newTimezone)
-    Router.push(newUrl.pathname + newUrl.search)
+    router.push(newUrl.pathname + newUrl.search)
 
     setTimezone(newTimezone)
     setNow(new Time(newTimezone))
